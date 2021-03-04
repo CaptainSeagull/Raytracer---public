@@ -26,10 +26,15 @@ To build install Visual Studio, start a command shell, and run "vcvarsall.bat x6
 In order for it to run point the Working Directory at the data directory. If you don't care about scene 0 should work without that though.
 
 Some flags which can be edited in win32_msvc.bat.
+
 OPTIMISED_FLAG - O2 or OD build, basically
+
 INTERNAL_FLAG - Some internal reporting like a text overley.
+
 ALLOW_ASSERTS - Enable/disable asserts
+
 LANE_WIDTH=8 - Lane width to compile for. Supports 1, 4, and 8.
+
 
 ## Directory structure
 ### src
