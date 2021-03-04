@@ -2,8 +2,8 @@
 
 rem Variables to set
 set OPTIMISED_FLAG=true
-set INTERNAL_FLAG=truejj
-set ALLOW_ASSERTS=true
+set INTERNAL_FLAG=false
+set ALLOW_ASSERTS=false
 set LANE_WIDTH=8
 
 rem Change active directory
