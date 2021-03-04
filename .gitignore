@@ -1,0 +1,6 @@
+build
+*.sublime-project
+*.sublime-workspace
+.vscode/*
+*.json
+*.rdbg

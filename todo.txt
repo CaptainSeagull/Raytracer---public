@@ -1,0 +1,4 @@
+- Sshow gif on github.
+- Handle backfaces?
+- Make Linux version. Should at least create a raytraced bitmap, even if it cannot run live.
+- Issue with using LANE_WIDTH=1 in Visual Studio 2017...
