@@ -21,7 +21,7 @@ spacebar (hold) - increment the rays-per-pixel for the scene, increasing quality
 J - save the current scene to disk
 
 ## Building
-To build install Visual Studio, stand a command shell, and run "vcvarsall.bat x64" to setup the paths and environment variables. Then run win32_msvc.bat to build the program. This will create a build directory with raytracer.exe which can be run.
+To build install Visual Studio, start a command shell, and run "vcvarsall.bat x64" to setup the paths and environment variables. Then run win32_msvc.bat to build the program. This will create a build directory with raytracer.exe which can be run.
 
 In order for it to run point the Working Directory at the data directory. If you don't care about scene 0 should work without that though.
 
@@ -30,7 +30,7 @@ In order for it to run point the Working Directory at the data directory. If you
 ### src
 Contains all the source files used by the program.
 
-build.cpp - the only C++ file built by the (it #includes all the others)
+build.cpp - the only C++ file built by the compiler (it #includes all the others)
 
 image.cpp - barebones Bitmap loader
 
@@ -38,7 +38,7 @@ m4x4.cpp - barebones 4x4 matrix implementation
 
 main.cpp - the main loop for the raytracer
 
-platform.h - common header which contains all interface to all OS-specific code
+platform.h - common header which contains an interface to all OS-specific code
 
 platform_win32.cpp - Windows implementation of platform code
 
