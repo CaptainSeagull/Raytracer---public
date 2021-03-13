@@ -71,6 +71,11 @@
     #endif
 #endif
 
+// The max supported LANE_WIDTH
+#define MAX_LANE_WIDTH 8
+
+// TODO: Horizontal sub/mul would be cool. Horizontal min/max too.
+
 // Lane width
 #if (LANE_WIDTH!=1)
     #if LANE_COMPILER_MSVC
@@ -96,15 +101,15 @@
 //
 // Macro utils
 #define LANE_FLT_MAX 3.402823466e+38F // TODO: MSVC specific?
-#define LANE_FLT_Min -LANE_FLT_MAX
+#define LANE_FLT_MIN -LANE_FLT_MAX
 #define LANE_PI32 3.14159265359f
 #define LANE_TAU32 6.28318530717958647692f
 
 #define LANE_U32_MAX ((uint32_t)-1)
 #define LANE_U64_MAX ((uint64_t)-1)
 
-#define LANE_DEGREES_TO_RADIANS(n) (((float)(n)) * 0.0174533f)
-#define LANE_RADIANS_TO_DEGREES(n) (((float)(n)) / 0.0174533f)
+#define LANE_DEGREES_TO_RADIANS(n) (((n)) * 0.0174533f)
+#define LANE_RADIANS_TO_DEGREES(n) (((n)) / 0.0174533f)
 
 namespace lane {
 
@@ -123,29 +128,21 @@ union Lane_V4;
 
 //
 // Methods
-template<typename A, typename B>
-LANE_PUBLIC_DEC B lerp(A t, B a, B b) {
-    B r = (1.0f - t) * a + t * b;
-    return(r);
-}
-
-template<typename T>
-LANE_PUBLIC_DEC T clamp(T a, T l, T u) {
-    if     (a < l) { return(l); }
-    else if(a > u) { return(u); }
-
-    return(a);
-}
+LANE_PUBLIC_DEC float max(float a, float b);
+LANE_PUBLIC_DEC float min(float a, float b);
+LANE_PUBLIC_DEC float clamp(float a, float l, float u);
+LANE_PUBLIC_DEC float clamp01(float a);
+LANE_PUBLIC_DEC float lerp(float t, float a, float b);
 
 //
 // Entropy / random numbers
-LANE_PUBLIC_DEC Lane_F32 random_unilateral(Lane_U32 *entropy_series);
-LANE_PUBLIC_DEC Lane_F32 random_bilateral(Lane_U32 *entropy_series);
-LANE_PUBLIC_DEC Lane_U32 xorshift32(Lane_U32 *entropy_series);
-
 LANE_PUBLIC_DEC float random_unilateral(uint32_t *entropy_series);
 LANE_PUBLIC_DEC float random_bilateral(uint32_t *entropy_series);
 LANE_PUBLIC_DEC uint32_t xorshift32(uint32_t *entropy_series);
+
+LANE_PUBLIC_DEC Lane_F32 random_unilateral(Lane_U32 *entropy_series);
+LANE_PUBLIC_DEC Lane_F32 random_bilateral(Lane_U32 *entropy_series);
+LANE_PUBLIC_DEC Lane_U32 xorshift32(Lane_U32 *entropy_series);
 
 //
 // V2
@@ -188,6 +185,7 @@ LANE_PUBLIC_DEC V2 hadamard(V2 a, V2 b);
 LANE_PUBLIC_DEC float length_sq(V2 a);
 LANE_PUBLIC_DEC float length(V2 a);
 LANE_PUBLIC_DEC V2 normalise(V2 a);
+LANE_PUBLIC_DEC V2 lerp(float t, V2 a, V2 b);
 
 //
 // V3
@@ -240,7 +238,7 @@ LANE_PUBLIC_DEC V3 normalise_or_zero(V3 a);
 // V4
 union V4 {
     struct { float x, y, z, w;          };
-    struct { V2 xy, yz;                 };
+    struct { V2 xy, zw;                 };
     struct { float _0; V2 yz; float _1; };
     struct { V3 xyz; float _2;          };
     struct { float _3; V3 yzw;          };
@@ -297,9 +295,11 @@ struct Lane_F32 {
 
 LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_F32 *dst, Lane_F32 src);
 LANE_PUBLIC_DEC Lane_F32 lane_f32(float a);
+LANE_PUBLIC_DEC Lane_F32 lane_f32(float a, float b, float c, float d, float e, float f, float g, float h);
 LANE_PUBLIC_DEC Lane_F32 lane_f32_from_u32(uint32_t a);
 LANE_PUBLIC_DEC Lane_F32 lane_f32_from_u32(Lane_U32 a);
 LANE_PUBLIC_DEC Lane_F32 lane_f32_zero(void);
+LANE_PUBLIC_DEC Lane_F32 lane_f32_floor(Lane_F32 a);
 LANE_PUBLIC_DEC float extract(Lane_F32 a, uint32_t lane);
 
 LANE_PUBLIC_DEC Lane_F32 operator&(Lane_U32 a, Lane_F32 b);
@@ -343,19 +343,25 @@ LANE_PUBLIC_DEC Lane_F32 square_root(Lane_F32 a);
 LANE_PUBLIC_DEC float square_root(float a);
 LANE_PUBLIC_DEC Lane_F32 rsquare_root(Lane_F32 a);
 LANE_PUBLIC_DEC float rsquare_root(float a);
-LANE_PUBLIC_DEC Lane_F32 lane_max(Lane_F32 a, Lane_F32 b);
-LANE_PUBLIC_DEC Lane_F32 lane_min(Lane_F32 a, Lane_F32 b);
-LANE_PUBLIC_DEC Lane_F32 lane_max(Lane_F32 a, float b);
-LANE_PUBLIC_DEC Lane_F32 lane_min(Lane_F32 a, float b);
-LANE_PUBLIC_DEC Lane_F32 lane_clamp(Lane_F32 a, Lane_F32 l, Lane_F32 u);
-LANE_PUBLIC_DEC Lane_F32 lane_clamp01(Lane_F32 a);
+LANE_PUBLIC_DEC Lane_F32 max(Lane_F32 a, Lane_F32 b);
+LANE_PUBLIC_DEC Lane_F32 max(float a,    Lane_F32 b);
+LANE_PUBLIC_DEC Lane_F32 max(Lane_F32 a, float    b);
+LANE_PUBLIC_DEC Lane_F32 min(Lane_F32 a, Lane_F32 b);
+LANE_PUBLIC_DEC Lane_F32 min(float    a, Lane_F32 b);
+LANE_PUBLIC_DEC Lane_F32 min(Lane_F32 a, float    b);
+LANE_PUBLIC_DEC Lane_F32 clamp(Lane_F32 a, Lane_F32 l, Lane_F32 u);
+LANE_PUBLIC_DEC Lane_F32 clamp(Lane_F32 a, float l, float u);
+LANE_PUBLIC_DEC Lane_F32 clamp01(Lane_F32 a);
+LANE_PUBLIC_DEC Lane_F32 lerp(Lane_F32 t, Lane_F32 a, Lane_F32 b);
+LANE_PUBLIC_DEC Lane_F32 lerp(float t, Lane_F32 a, Lane_F32 b);
 
-LANE_PUBLIC_DEC float lane_horizontal_add(Lane_F32 a);
+LANE_PUBLIC_DEC float horizontal_add(Lane_F32 a);
 #define GATHER_F32(ptr, i, mem) gather_f32_internal(&(ptr)->mem, sizeof(*(ptr)), i)
 LANE_PUBLIC_DEC Lane_F32 gather_f32_internal(void *ptr, uint64_t stride, Lane_U32 indices);
 
 //
 // Lane_U32
+// NOTE: This should only really be used as a boolean flag... VERY underdeveloped!
 struct Lane_U32 {
     Lane_U32_Internal v;
 
@@ -365,14 +371,14 @@ struct Lane_U32 {
 LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_U32 *dst, Lane_U32 src);
 LANE_PUBLIC_DEC Lane_U32 lane_u32(uint32_t a);
 LANE_PUBLIC_DEC Lane_U32 lane_u32(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f, uint32_t g, uint32_t h);
+LANE_PUBLIC_DEC Lane_U32 lane_u32_from_f32(float a);
+LANE_PUBLIC_DEC Lane_U32 lane_u32_from_f32(Lane_F32 a);
 LANE_PUBLIC_DEC Lane_U32 and_not(Lane_U32 a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 not_zero(Lane_U32 a);
 LANE_PUBLIC_DEC uint32_t extract(Lane_U32 a, uint32_t lane);
 LANE_PUBLIC_DEC int/*Bool*/ lane_mask_is_zeroed(Lane_U32 a);
 LANE_PUBLIC_DEC int/*Bool*/ lane_mask_is_full(Lane_U32 a);
-LANE_PUBLIC_DEC uint64_t lane_horizontal_add(Lane_U32 a);
-//LANE_PUBLIC_DEC Lane_F32 lane_max(Lane_F32 a, Lane_F32 b); // TODO: Implement!
-//LANE_PUBLIC_DEC Lane_F32 lane_min(Lane_F32 a, Lane_F32 b); // TODO: Implement!
+LANE_PUBLIC_DEC uint64_t horizontal_add(Lane_U32 a);
 
 LANE_PUBLIC_DEC Lane_U32 operator<<(Lane_U32 a, uint32_t s);
 LANE_PUBLIC_DEC Lane_U32 operator>>(Lane_U32 a, uint32_t s);
@@ -388,10 +394,6 @@ LANE_PUBLIC_DEC Lane_U32 operator*(Lane_U32 a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator*(Lane_U32 a, uint32_t b);
 LANE_PUBLIC_DEC Lane_U32 operator*(uint32_t a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator*=(Lane_U32 &a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator/(Lane_U32 a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator/(Lane_U32 a, uint32_t b);
-LANE_PUBLIC_DEC Lane_U32 operator/(uint32_t a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator/=(Lane_U32 &a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator+(Lane_U32 a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator+(Lane_U32 a, uint32_t b);
 LANE_PUBLIC_DEC Lane_U32 operator+(uint32_t a, Lane_U32 b);
@@ -402,18 +404,13 @@ LANE_PUBLIC_DEC Lane_U32 operator-(Lane_U32 a, uint32_t b);
 LANE_PUBLIC_DEC Lane_U32 operator-(uint32_t a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator-=(Lane_U32 &a, Lane_U32 b);
 
-LANE_PUBLIC_DEC Lane_U32 operator>(Lane_U32 a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator>=(Lane_U32 a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator<(Lane_U32 a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator<=(Lane_U32 a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator==(Lane_U32 a, Lane_U32 b);
 LANE_PUBLIC_DEC Lane_U32 operator!=(Lane_U32 a, Lane_U32 b);
-LANE_PUBLIC_DEC Lane_U32 operator>(Lane_U32 a, uint32_t b);
-LANE_PUBLIC_DEC Lane_U32 operator>=(Lane_U32 a, uint32_t b);
-LANE_PUBLIC_DEC Lane_U32 operator<(Lane_U32 a, uint32_t b);
-LANE_PUBLIC_DEC Lane_U32 operator<=(Lane_U32 a, uint32_t b);
 LANE_PUBLIC_DEC Lane_U32 operator==(Lane_U32 a, uint32_t b);
 LANE_PUBLIC_DEC Lane_U32 operator!=(Lane_U32 a, uint32_t b);
+
+#define GATHER_U32(ptr, i, mem) gather_u32_internal(&(ptr)->mem, sizeof(*(ptr)), i)
+LANE_PUBLIC_DEC Lane_U32 gather_u32_internal(void *ptr, uint64_t stride, Lane_U32 indices);
 
 //
 // Lane_V2
@@ -464,10 +461,12 @@ LANE_PUBLIC_DEC Lane_V2 hadamard(Lane_V2 a, Lane_V2 b);
 LANE_PUBLIC_DEC Lane_F32 length_sq(Lane_V2 a);
 LANE_PUBLIC_DEC Lane_F32 length(Lane_V2 a);
 LANE_PUBLIC_DEC Lane_V2 normalise(Lane_V2 a);
+LANE_PUBLIC_DEC Lane_V2 lerp(Lane_F32 t, Lane_V2 a, Lane_V2 b);
+LANE_PUBLIC_DEC Lane_V2 lerp(float t, Lane_V2 a, Lane_V2 b);
 
 LANE_PUBLIC_DEC V2 extract(Lane_V2 a, uint32_t lane);
 LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_V2 *dst, Lane_V2 src);
-LANE_PUBLIC_DEC V2 lane_horizontal_add(Lane_V2 a);
+LANE_PUBLIC_DEC V2 horizontal_add(Lane_V2 a);
 LANE_PUBLIC_DEC Lane_V2 gather_v2_internal(void *ptr, uint64_t stride, Lane_U32 indices);
 
 //
@@ -526,10 +525,12 @@ LANE_PUBLIC_DEC Lane_F32 length_sq(Lane_V3 a);
 LANE_PUBLIC_DEC Lane_F32 length(Lane_V3 a);
 LANE_PUBLIC_DEC Lane_V3 normalise(Lane_V3 a);
 LANE_PUBLIC_DEC Lane_V3 normalise_or_zero(Lane_V3 a);
+LANE_PUBLIC_DEC Lane_V3 lerp(Lane_F32 t, Lane_V3 a, Lane_V3 b);
+LANE_PUBLIC_DEC Lane_V3 lerp(float t, Lane_V3 a, Lane_V3 b);
 
 LANE_PUBLIC_DEC V3 extract(Lane_V3 a, uint32_t lane);
 LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_V3 *dst, Lane_V3 src);
-LANE_PUBLIC_DEC V3 lane_horizontal_add(Lane_V3 a);
+LANE_PUBLIC_DEC V3 horizontal_add(Lane_V3 a);
 #define GATHER_V3(ptr, i, mem) gather_v3_internal(&(ptr)->mem, sizeof(*(ptr)), i)
 LANE_PUBLIC_DEC Lane_V3 gather_v3_internal(void *ptr, uint64_t stride, Lane_U32 indices);
 
@@ -588,10 +589,12 @@ LANE_PUBLIC_DEC Lane_V4 hadamard(Lane_V4 a, Lane_V4 b);
 LANE_PUBLIC_DEC Lane_F32 length_sq(Lane_V4 a);
 LANE_PUBLIC_DEC Lane_F32 length(Lane_V4 a);
 LANE_PUBLIC_DEC Lane_V4 normalise(Lane_V4 a);
+LANE_PUBLIC_DEC Lane_V4 lerp(Lane_F32 t, Lane_V4 a, Lane_V4 b);
+LANE_PUBLIC_DEC Lane_V4 lerp(float t, Lane_V4 a, Lane_V4 b);
 
 LANE_PUBLIC_DEC V4 extract(Lane_V4 a, uint32_t lane);
 LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_V4 *dst, Lane_V4 src);
-LANE_PUBLIC_DEC V4 lane_horizontal_add(Lane_V4 a);
+LANE_PUBLIC_DEC V4 horizontal_add(Lane_V4 a);
 #define GATHER_V4(ptr, i, mem) gather_v4_internal(&(ptr)->mem, sizeof(*(ptr)), i)
 LANE_PUBLIC_DEC Lane_V4 gather_v4_internal(void *ptr, uint64_t stride, Lane_U32 indices);
 

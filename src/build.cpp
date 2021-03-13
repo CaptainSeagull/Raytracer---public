@@ -46,9 +46,17 @@ using namespace lane;
 #include "scene_builder.cpp"
 #include "main.cpp"
 
-#if OS_WIN32
-    #include <windows.h>
-    #include "platform_win32.cpp"
+#if USE_SDL
+    #include "../shared/SDL2/SDL.h"
+    #include <stdio.h>
+    #include <stdlib.h>
+
+    #include "platform_sdl2.cpp"
 #else
-    #error "Unknown OS"
+    #if OS_WIN32
+        #include <windows.h>
+        #include "platform_win32.cpp"
+    #else
+        #error "Unknown OS"
+    #endif
 #endif

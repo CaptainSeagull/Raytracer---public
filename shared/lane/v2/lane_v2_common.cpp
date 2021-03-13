@@ -234,10 +234,10 @@ LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_V2 *dst, Lane_V2 src
     conditional_assign(mask, &dst->y, src.y);
 }
 
-LANE_PUBLIC_DEC V2 lane_horizontal_add(Lane_V2 a) {
+LANE_PUBLIC_DEC V2 horizontal_add(Lane_V2 a) {
     V2 r;
-    r.x = lane_horizontal_add(a.x);
-    r.y = lane_horizontal_add(a.y);
+    r.x = horizontal_add(a.x);
+    r.y = horizontal_add(a.y);
 
     return(r);
 }
@@ -248,5 +248,15 @@ LANE_PUBLIC_DEC Lane_V2 gather_v2_internal(void *ptr, uint64_t stride, Lane_U32 
     r.x = gather_f32_internal((float *)ptr + 0, stride, indices);
     r.y = gather_f32_internal((float *)ptr + 1, stride, indices);
 
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_V2 lerp(Lane_F32 t, Lane_V2 a, Lane_V2 b) {
+    Lane_V2 r = (lane_f32(1.0f) - t) * a + t * b;
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_V2 lerp(float t, Lane_V2 a, Lane_V2 b) {
+    Lane_V2 r = (lane_f32(1.0f) - lane_f32(t)) * a + t * b;
     return(r);
 }

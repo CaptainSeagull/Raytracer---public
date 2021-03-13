@@ -1,4 +1,4 @@
-- Sshow gif on github.
 - Handle backfaces?
 - Make Linux version. Should at least create a raytraced bitmap, even if it cannot run live.
 - Issue with using LANE_WIDTH=1 in Visual Studio 2017...
+- Some sort of tree structure for the scene would be cool. Could even have a LOD based on nodes.

@@ -4,8 +4,8 @@
 internal_global BITMAPINFO global_bitmap_info;
 internal_global API *global_api;
 
-internal File system_read_entire_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
-    File res = {0};
+internal File system_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
+    File res = {};
 
     ASSERT(fname.len < 1024);
     Char buf[1024] = {};
@@ -37,7 +37,7 @@ internal File system_read_entire_file(Memory *memory, U32 memory_index_to_use, S
     return(res);
 }
 
-internal Bool system_write_to_file(String fname, U8 *data, U64 size) {
+internal Bool system_write_file(String fname, U8 *data, U64 size) {
     Bool res = false;
 
     ASSERT(fname.len < 1024);
@@ -201,6 +201,13 @@ internal LARGE_INTEGER win32_internal_get_wall_clock(Void) {
     return(res);
 }
 
+internal Void win32_internal_get_window_dimension(HWND wnd, Int *w, Int *h) {
+    RECT cr;
+    GetClientRect(wnd, &cr);
+    *w = (cr.right - cr.left);
+    *h = (cr.bottom - cr.top);
+}
+
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     Int res = 0xFF;
 
@@ -338,11 +345,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
 
             if(RegisterClassA(&wnd_class)) {
-                Int win_width = 1920 / 2;
-                Int win_height = 1080 / 2;
+                Int target_wnd_width = 1920 / 2;
+                Int target_wnd_height = 1080 / 2;
                 HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, "Raytracer",
                                            WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
-                                           win_width, win_height, 0, 0, hInstance, 0);
+                                           target_wnd_width, target_wnd_height, 0, 0, hInstance, 0);
+
+                Int wnd_width = 0, wnd_height = 0;
+                win32_internal_get_window_dimension(wnd, &wnd_width, &wnd_height);
 
                 if((wnd) && (wnd != INVALID_HANDLE_VALUE)) {
                     LARGE_INTEGER last_counter = win32_internal_get_wall_clock();
@@ -409,6 +419,17 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                             RECT cr;
                             GetClientRect(wnd, &cr);
 
+                            {
+                                POINT pt;
+                                GetCursorPos(&pt);
+                                ScreenToClient(wnd, &pt);
+
+                                api.previous_mouse_pos = api.mouse_pos;
+
+                                api.mouse_pos.x = clamp01((F32)pt.x / (F32)wnd_width);
+                                api.mouse_pos.y = clamp01((F32)pt.y / (F32)wnd_height);
+                            }
+
 #if INTERNAL
                             {
                                 // TODO: This part is a little flakey... why does it need to be called before handle_input_and_render?
@@ -419,8 +440,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                 defer { DeleteObject(font); };
                                 HGDIOBJ oldFont = SelectObject(dc, font);
                                 Char buf[256] = {};
-                                stbsp_snprintf(buf, ARRAY_COUNT(buf), "MS %.2fms | Rays per pixel %d | Lane Width %d | Scene %d",
-                                               seconds_elapsed_for_last_frame, api.current_rays_per_pixel, LANE_WIDTH, api.current_scene_i);
+                                stbsp_snprintf(buf, ARRAY_COUNT(buf), "MS %.2fms | Rays per pixel %d | Lane Width %d | Scene %d | %f %f",
+                                               seconds_elapsed_for_last_frame, api.current_rays_per_pixel, LANE_WIDTH, api.current_scene_i,
+                                               api.mouse_pos.x, api.mouse_pos.y);
                                 TextOut(dc, 10, 10, buf, string_length(buf));
                             }
 #endif
@@ -429,9 +451,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                             api.window_height = cr.bottom - cr.top;;
 
                             handle_input_and_render(&api, &scene);
-                            if(!api.init) {
-                                api.image_size_change = false;
-                            }
+                            if(!api.init) { api.image_size_change = false; }
                             api.init = false;
 
                             win32_internal_update_window(dc, &cr);

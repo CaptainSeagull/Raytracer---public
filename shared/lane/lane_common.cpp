@@ -1,3 +1,28 @@
+LANE_PUBLIC_DEC float max(float a, float b) {
+    float r = (a > b) ? a : b;
+    return(r);
+}
+
+LANE_PUBLIC_DEC float min(float a, float b) {
+    float r = (a < b) ? a : b;
+    return(r);
+}
+
+LANE_PUBLIC_DEC float clamp(float a, float l, float u) {
+    float r = min(max(a, l), u);
+    return(r);
+}
+
+LANE_PUBLIC_DEC float clamp01(float a) {
+    float r = clamp(a, 0.0f, 1.0f);
+    return(r);
+}
+
+LANE_PUBLIC_DEC float lerp(float t, float a, float b) {
+    float r = (1.0f - t) * a + t * b;
+    return(r);
+}
+
 LANE_PUBLIC_DEC Lane_U32 xorshift32(Lane_U32 *entropy_series) {
     /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
     *entropy_series ^= *entropy_series << 13;

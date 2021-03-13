@@ -179,7 +179,7 @@ internal String print_node_to_string(Memory *memory, Node *node) {
 internal Void print_node(Memory *memory, String path, Node *node) {
     String string_to_output = print_node_to_string(memory, node);
 
-    system_write_to_file(path, (U8 *)string_to_output.e, string_to_output.len);
+    system_write_file(path, (U8 *)string_to_output.e, string_to_output.len);
 }
 
 internal Void internal_parse(Memory *memory, Tokenizer *tokenizer, Node *parent) {

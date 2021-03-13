@@ -3,6 +3,12 @@
 
 // From: https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header and https://www.fileformat.info/format/bmp/egff.htm
 
+struct Image {
+    Int width;
+    Int height;
+    U32 *pixels;
+};
+
 #pragma pack(push, 1)
 struct Bitmap_Header {
     // BMP_File_Header (2.x)
@@ -18,7 +24,7 @@ struct Bitmap_Header {
     S32 height;
     U16 planes;
     U16 bits_per_pixel;
-    U32 compression;
+    U32 compression; // NOTE: This is NOT compression... if this is 3 we need to use the colour mask to determine the RGBA slots...
     U32 size_of_bitmap;
 
     // TODO: Unused.
@@ -28,12 +34,6 @@ struct Bitmap_Header {
     U32 colours_important;
 };
 #pragma pack(pop)
-
-struct Image {
-    Int width;
-    Int height;
-    U32 *pixels;
-};
 
 internal Void write_image_to_disk(Memory *memory, Image *image, String file_name) {
     U64 output_pixel_size = image->width * image->height * sizeof(U32); // TODO: Should this not be sizeof U32...?
@@ -56,11 +56,50 @@ internal Void write_image_to_disk(Memory *memory, Image *image, String file_name
     memcpy(to_write, &header, sizeof(header));
     memcpy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
-    Bool success = system_write_to_file(file_name, to_write, to_write_size);
+    Bool success = system_write_file(file_name, to_write, to_write_size);
     ASSERT(success);
 }
 
-internal U32 *get_pixel_pointer(Image *image, Int x, Int y) {
-    U32 *res = image->pixels + (y * image->width) + x;
-    return(res);
+internal Image load_image(Memory *memory, String file_name) {
+    Image img = {};
+
+    File raw_bitmap = system_read_file(memory, Memory_Index_temp, file_name);
+    defer { memory_pop(memory, raw_bitmap.e); };
+
+    ASSERT(raw_bitmap.size > 0);
+    if(raw_bitmap.size > 0) {
+        Bitmap_Header *header = (Bitmap_Header *)raw_bitmap.e;
+        ASSERT((header->file_type == 0x4D42) &&
+               (header->planes == 1) &&
+               (header->compression == 0));
+
+        Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
+
+        Void *bitmap_memory = memory_push(memory, Memory_Index_permanent, header->width * header->height * sizeof(U32));
+
+        img.width = header->width;
+        img.height = header->height;
+        img.pixels = (U32 *)bitmap_memory;
+
+        switch(header->bits_per_pixel) {
+            case 32: { memcpy(img.pixels, data_start, raw_bitmap.size - header->bitmap_offset);  } break;
+            case 24: {
+                U8 *src_at = (U8 *)data_start;
+                U32 *dst_at = (U32 *)img.pixels;
+                for(U64 pixel_i = 0; (pixel_i < raw_bitmap.size - header->bitmap_offset); pixel_i += 3) {
+                    U8 *r = src_at + 0;
+                    U8 *g = src_at + 1;
+                    U8 *b = src_at + 2;
+
+                    *dst_at = (0xFF << 24) | (*b << 16) | (*g << 8) | (*r << 0);
+                    dst_at += 1;
+                    src_at += 3;
+                }
+            } break;
+        }
+
+        //write_image_to_disk(memory, &img, "readme/test.bmp"); // Write the loaded in bitmap back to disk. Was used for testing 24-bits per pixel.
+    }
+
+    return(img);
 }

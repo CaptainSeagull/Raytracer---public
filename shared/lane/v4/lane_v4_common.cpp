@@ -262,12 +262,12 @@ LANE_PUBLIC_DEC void conditional_assign(Lane_U32 mask, Lane_V4 *dst, Lane_V4 src
     conditional_assign(mask, &dst->w, src.w);
 }
 
-LANE_PUBLIC_DEC V4 lane_horizontal_add(Lane_V4 a) {
+LANE_PUBLIC_DEC V4 horizontal_add(Lane_V4 a) {
     V4 r;
-    r.x = lane_horizontal_add(a.x);
-    r.y = lane_horizontal_add(a.y);
-    r.z = lane_horizontal_add(a.z);
-    r.w = lane_horizontal_add(a.w);
+    r.x = horizontal_add(a.x);
+    r.y = horizontal_add(a.y);
+    r.z = horizontal_add(a.z);
+    r.w = horizontal_add(a.w);
 
     return(r);
 }
@@ -280,5 +280,26 @@ LANE_PUBLIC_DEC Lane_V4 gather_v4_internal(void *ptr, uint64_t stride, Lane_U32 
     r.z = gather_f32_internal((float *)ptr + 2, stride, indices);
     r.w = gather_f32_internal((float *)ptr + 3, stride, indices);
 
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_V4 conditional_gather_v4_internal(Lane_U32 mask, void *ptr, uint64_t stride, Lane_U32 indices) {
+    Lane_V4 r;
+    // TODO: Not most efficient way - could write a custom V4 gather for each lane width.
+    r.x = gather_f32_internal((float *)ptr + 0, stride, indices);
+    r.y = gather_f32_internal((float *)ptr + 1, stride, indices);
+    r.z = gather_f32_internal((float *)ptr + 2, stride, indices);
+    r.w = gather_f32_internal((float *)ptr + 3, stride, indices);
+
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_V4 lerp(Lane_F32 t, Lane_V4 a, Lane_V4 b) {
+    Lane_V4 r = (lane_f32(1.0f) - t) * a + t * b;
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_V4 lerp(float t, Lane_V4 a, Lane_V4 b) {
+    Lane_V4 r = (lane_f32(1.0f) - lane_f32(t)) * a + t * b;
     return(r);
 }

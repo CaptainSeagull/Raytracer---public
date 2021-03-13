@@ -410,7 +410,7 @@ TOKEN_PUBLIC_DEC Token get_token(Tokenizer *tokenizer) {
                     res.len = (tokenizer->at - res.e);
                     res.type = Token_Type_identifier;
                 } else if(TOKEN_IS_NUMBER(c)) {
-                    if(c == '0' && tokenizer->at[0] == 'x' || tokenizer->at[0] == 'X') {
+                    if((c == '0' && tokenizer->at[0] == 'x') || tokenizer->at[0] == 'X') {
                         internal_tokenizer_advance(tokenizer, 1);
                         while(TOKEN_IS_HEXIDECIMAL(tokenizer->at[0])) {
                             internal_tokenizer_advance(tokenizer, 1);

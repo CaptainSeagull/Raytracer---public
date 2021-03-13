@@ -48,32 +48,32 @@ enum Key : Int {
     controller_x,
     controller_y,
 
-    key_a = 65, // 'A'
-    key_b,
-    key_c,
-    key_d,
-    key_e,
-    key_f,
-    key_g,
-    key_h,
-    key_i,
-    key_j,
-    key_k,
-    key_l,
-    key_m,
-    key_n,
-    key_o,
-    key_p,
-    key_q,
-    key_r,
-    key_s,
-    key_t,
-    key_u,
-    key_v,
-    key_w,
-    key_x,
-    key_y,
-    key_z,
+    key_A = 65, // 'A'
+    key_B,
+    key_C,
+    key_D,
+    key_E,
+    key_F,
+    key_G,
+    key_H,
+    key_I,
+    key_J,
+    key_K,
+    key_L,
+    key_M,
+    key_N,
+    key_O,
+    key_P,
+    key_Q,
+    key_R,
+    key_S,
+    key_T,
+    key_U,
+    key_V,
+    key_W,
+    key_X,
+    key_Y,
+    key_Z,
 
     key_cnt = 128
 };
@@ -87,6 +87,9 @@ struct API {
     Bool running;
     F32 dt;
     F32 seconds_elapsed_for_last_frame;
+
+    V2 previous_mouse_pos;
+    V2 mouse_pos;
 
     Int window_width;
     Int window_height;
@@ -112,8 +115,8 @@ struct API {
 };
 
 // Platform services
-internal File system_read_entire_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate = false);
-internal Bool system_write_to_file(String fname, U8 *data, U64 size);
+internal File system_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate = false);
+internal Bool system_write_file(String fname, U8 *data, U64 size);
 internal U64 system_locked_add(U64 volatile *a, U64 b);
 internal Void system_create_thread(Void *p);
 

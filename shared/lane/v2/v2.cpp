@@ -144,3 +144,9 @@ LANE_PUBLIC_DEC V2 normalise(V2 a) {
     V2 r = a * (1.0f / length(a));
     return(r);
 }
+
+LANE_PUBLIC_DEC V2 lerp(float t, V2 a, V2 b) {
+    V2 r = (1.0f - t) * a + t * b;
+    return(r);
+}
+

@@ -4,7 +4,9 @@ rem Variables to set
 set OPTIMISED_FLAG=true
 set INTERNAL_FLAG=false
 set ALLOW_ASSERTS=false
-set LANE_WIDTH=8
+set LANE_WIDTH=1
+
+set USE_SDL=false
 
 rem Change active directory
 cd %~dp0
@@ -17,7 +19,8 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 
 rem Warnings to ignore
-set COMMON_WARNINGS=-wd4189 -wd4706 -wd4996 -wd4100 -wd4127 -wd4267 -wd4505 -wd4820 -wd4365 -wd4514 -wd4062 -wd4061 -wd4668 -wd4389 -wd4018 -wd4711 -wd4987 -wd4710 -wd4625 -wd4626 -wd4350 -wd4826 -wd4640 -wd4571 -wd4986 -wd4388 -wd4129 -wd4201 -wd4577 -wd4244 -wd4623 -wd4204 -wd4101 -wd4255 -wd4191 -wd4477 -wd4242 -wd4464 -wd5045 -wd5220
+set WARNINGS=-wd4189 -wd4706 -wd4996 -wd4100 -wd4127 -wd4267 -wd4505 -wd4820 -wd4365 -wd4514 -wd4062 -wd4061 -wd4668 -wd4389 -wd4018 -wd4711 -wd4987 -wd4710 -wd4625 -wd4626 -wd4350 -wd4826 -wd4640 -wd4571 -wd4986 -wd4388 -wd4129 -wd4201 -wd4577 -wd4244 -wd4623 -wd4204 -wd4101 -wd4255 -wd4191 -wd4477 -wd4242 -wd4464 -wd5045 -wd5220
+set LIBS=kernel32.lib user32.lib gdi32.lib 
 
 rem INTERNAL macro
 if "%INTERNAL_FLAG%"=="true" (
@@ -26,14 +29,23 @@ if "%INTERNAL_FLAG%"=="true" (
     set INTERNAL=-DINTERNAL=0
 )
 
+rem Enable/disable ASSERTs
 if "%ALLOW_ASSERTS%"=="true" (
-    set ALLOW_ASSETS=-DALLOW_ASSERTS=1
+    set ALLOW_ASSERTS=-DALLOW_ASSERTS=1
 ) else (
-    set ALLOW_ASSETS=-DALLOW_ASSERTS=0
+    set ALLOW_ASSERTS=-DALLOW_ASSERTS=0
+)
+
+rem Use SDL. For testing only really.
+if "%USE_SDL%"=="true" (
+    set USE_SDL=-DUSE_SDL=1
+    set LIBS=%LIBS% SDL2.lib SDL2main.lib SDL2test.lib shell32.lib
+) else (
+    set USE_SDL=-DUSE_SDL=0
 )
 
 rem Compiler flags
-set COMPILER_FLAGS=-nologo -Gm- -GR- %COMMON_WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSETS% -DLANE_WIDTH=%LANE_WIDTH% -DRANDOM_SAMPLE_ANTI_ALIASING=1
+set COMPILER_FLAGS=-nologo -Gm- -GR- %WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSERTS% %USE_SDL% -DLANE_WIDTH=%LANE_WIDTH% -DRANDOM_SAMPLE_ANTI_ALIASING=1
 
 rem Optimised
 if "%OPTIMISED_FLAG%"=="true" (
@@ -53,7 +65,7 @@ IF NOT EXIST "build" mkdir "build"
 rem Build raytracer
 pushd "build"
 echo Building raytracer
-cl -Feraytracer %COMPILER_FLAGS% "../src/build.cpp" -FmMirror.map -link kernel32.lib user32.lib gdi32.lib -stack:0x100000,0x100000 -subsystem:windows,5.2
+cl -Feraytracer %COMPILER_FLAGS% "../src/build.cpp" -FmMirror.map -link %LIBS% -stack:0x100000,0x100000 -subsystem:windows,5.2
 popd
 
 :skipEverything

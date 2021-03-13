@@ -5,6 +5,13 @@ LANE_PUBLIC_DEC Lane_F32 lane_f32(float a) {
     return(r);
 }
 
+LANE_PUBLIC_DEC Lane_F32 lane_f32(float a, float b, float c, float d, float e, float f, float g, float h) {
+    Lane_F32 r;
+    r.v = _mm256_setr_ps(a, b, c, d, e, f, g, h);
+
+    return(r);
+}
+
 LANE_PUBLIC_DEC Lane_F32 lane_f32_from_u32(uint32_t a) {
     Lane_F32 r;
     r.v = _mm256_set1_ps((float)a);
@@ -22,6 +29,13 @@ LANE_PUBLIC_DEC Lane_F32 lane_f32_from_u32(Lane_U32 a) {
 LANE_PUBLIC_DEC Lane_F32 lane_f32_zero(void) {
     Lane_F32 r;
     r.v = _mm256_setzero_ps();
+
+    return(r);
+}
+
+LANE_PUBLIC_DEC Lane_F32 lane_f32_floor(Lane_F32 a) {
+    Lane_F32 r;
+    r.v = _mm256_floor_ps(a.v);
 
     return(r);
 }
@@ -125,14 +139,14 @@ LANE_PUBLIC_DEC Lane_F32 rsquare_root(Lane_F32 a) {
     return(r);
 }
 
-LANE_PUBLIC_DEC Lane_F32 lane_max(Lane_F32 a, Lane_F32 b) {
+LANE_PUBLIC_DEC Lane_F32 max(Lane_F32 a, Lane_F32 b) {
     Lane_F32 r;
     r.v = _mm256_max_ps(a.v, b.v);
 
     return(r);
 }
 
-LANE_PUBLIC_DEC Lane_F32 lane_min(Lane_F32 a, Lane_F32 b) {
+LANE_PUBLIC_DEC Lane_F32 min(Lane_F32 a, Lane_F32 b) {
     Lane_F32 r;
     r.v = _mm256_min_ps(a.v, b.v);
 
