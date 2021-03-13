@@ -20,7 +20,7 @@ spacebar (hold) - increment the rays-per-pixel for the scene, increasing quality
 
 J - save the current scene to disk
 
-Keys 0 - 4 - Choose which scene to render.
+Keys 0 - 4 - Change the scene being rendered.
 
 Left-click  - Pan
 Right-Click - Rotate camera (NOT orbit)
@@ -29,6 +29,16 @@ Right-Click - Rotate camera (NOT orbit)
 To build install Visual Studio, start a command shell, and run "vcvarsall.bat x64" to setup the paths and environment variables. Then run win32_msvc.bat to build the program. This will create a build directory with raytracer.exe which can be run.
 
 In order for it to run point the Working Directory at the data directory. If you don't care about scene 0 should work without that though.
+
+Some flags which can be edited in win32_msvc.bat.
+
+OPTIMISED_FLAG - O2 or OD build, basically
+
+INTERNAL_FLAG - Some internal reporting like a text overley.
+
+ALLOW_ASSERTS - Enable/disable asserts
+
+LANE_WIDTH=8 - Lane width to compile for. Supports 1, 4, and 8.
 
 
 ## Directory structure
