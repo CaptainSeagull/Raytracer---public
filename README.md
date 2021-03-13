@@ -20,6 +20,8 @@ spacebar (hold) - increment the rays-per-pixel for the scene, increasing quality
 
 J - save the current scene to disk
 
+Keys 0 - 4 - Change the scene being rendered.
+
 ## Building
 To build install Visual Studio, start a command shell, and run "vcvarsall.bat x64" to setup the paths and environment variables. Then run win32_msvc.bat to build the program. This will create a build directory with raytracer.exe which can be run.
 
