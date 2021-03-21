@@ -39,7 +39,7 @@ INTERNAL_FLAG - Some internal reporting like a text overley.
 
 ALLOW_ASSERTS - Enable/disable asserts
 
-LANE_WIDTH=8 - Lane width to compile for. Supports 1, 4, and 8.
+LANE_WIDTH - Lane width to compile for. Supports 1, 4, and 8.
 
 
 ## Directory structure
