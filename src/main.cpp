@@ -3,10 +3,10 @@ internal Void init_scene_0(API *api, Scene *scene) {
 
     // Exported from SketchUp.
 
-    File file = system_read_file(memory, Memory_Index_temp, "test.json", true);
+    File file = api->cb.read_file(memory, Memory_Index_temp, "test.json", true);
     if(file.size > 0) {
         String json_as_string = create_string(file.e, file.size);
-        create_scene_from_json(memory, json_as_string, scene);
+        create_scene_from_json(api, memory, json_as_string, scene);
 
         memory_pop(memory, file.e);
     }
@@ -34,6 +34,8 @@ internal Void init_scene_1(API *api, Scene *scene) {
     materials[mat_i++] = create_material(v3( 0.0f, 0.0f, 0.0f), v4(0.20f, 0.80f, 0.90f, 1.0f), 0.85f); // 5
     materials[mat_i++] = create_material(v3( 0.0f, 0.0f, 0.0f), v4(0.95f, 0.95f, 0.95f, 1.0f), 1.00f); // 6
 
+    Int tex_i = 0;
+
     Int plane_i = 0;
     planes[plane_i++] = create_plane(v3(0, 0, 1), 0, 1);
 
@@ -44,13 +46,20 @@ internal Void init_scene_1(API *api, Scene *scene) {
     spheres[sphere_i++] = create_sphere(v3( 1, -2, 3), 1.0f, 5);
     spheres[sphere_i++] = create_sphere(v3(-2,  3, 0), 2.0f, 6);
 
+    Int face_i = 0;
+
+    Int textured_face_i = 0;
+
     api->camera_rotation.x = -65;
 
     api->pos = v3(0, -10, 5);
 
     scene->material_count = mat_i;
+    scene->texture_count = tex_i;
     scene->plane_count = plane_i;
     scene->sphere_count = sphere_i;
+    scene->face_count = face_i;
+    scene->textured_face_count = textured_face_i;
 }
 
 internal Void init_scene_2(API *api, Scene *scene) {
@@ -189,7 +198,7 @@ internal Void init_scene_4(API *api, Scene *scene) {
     materials[mat_i++] = create_material(v3( 0.3f, 0.4f, 0.5f), v4(0.00f, 0.00f, 0.00f, 1.0f), 0.00f); // 0
 
     Int tex_i = 0;
-    textures[tex_i++] = create_texture(v3(0), load_image(memory, "texture.bmp"), 1.0f);
+    textures[tex_i++] = create_texture(v3(0), load_image(api, memory, "texture.bmp"), 1.0f);
 
     Int textured_face_i = 0;
 
@@ -288,10 +297,126 @@ internal Void init_scene_4(API *api, Scene *scene) {
     scene->textured_face_count = textured_face_i;
 }
 
+internal Void debug_output_testing(API *api, Memory *memory, Debug_Node *root) {
+    Debug_Node *a = add_child_to_node(memory, &root, Debug_Node_Type_header, "A");
+    Debug_Node *b = add_child_to_node(memory, &root, Debug_Node_Type_header, "B");
+    Debug_Node *c = add_child_to_node(memory, &root, Debug_Node_Type_header, "C");
+
+    Debug_Node *b1 = add_child_to_node(memory, &b, Debug_Node_Type_internal, "B1");
+    Debug_Node *b2 = add_child_to_node(memory, &b, Debug_Node_Type_internal, "B2");
+
+    Debug_Node *b21 = add_child_to_node(memory, &b1, Debug_Node_Type_internal, "B21");
+    Debug_Node *b22 = add_child_to_node(memory, &b1, Debug_Node_Type_internal, "B22");
+    Debug_Node *b23 = add_child_to_node(memory, &b1, Debug_Node_Type_internal, "B23");
+    Debug_Node *b24 = add_child_to_node(memory, &b1, Debug_Node_Type_internal, "B24");
+
+    String string_to_output = print_node_to_string(memory, Memory_Index_debug_output, root);
+    api->cb.write_file("debug_output.txt", (U8 *)string_to_output.e, string_to_output.len);
+}
+
+#if USE_OPENCL
+internal Void opencl_test(Memory *memory) {
+    Int vector_size = 1024;
+
+    Char const *saxpy_kernel =
+        "__kernel void saxpy_kernel(float alpha,\n"
+        "                           __global float *a,\n"
+        "                           __global float *b,\n"
+        "                           __global float *c) {\n"
+        "    int index = get_global_id(0);"
+        "    c[index] = alpha * a[index] + b[index];"
+        "}";
+
+    F32 alpha = 2.0f;
+    F32 *a = (F32 *)memory_push(memory, Memory_Index_temp, sizeof(F32) * vector_size);
+    F32 *b = (F32 *)memory_push(memory, Memory_Index_temp, sizeof(F32) * vector_size);
+    F32 *c = (F32 *)memory_push(memory, Memory_Index_temp, sizeof(F32) * vector_size);
+
+    for(Int i = 0; (i < vector_size); ++i) {
+        a[i] = i;
+        b[i] = vector_size - i;
+        c[i] = -1;
+    }
+
+    cl_int status = 0;
+
+    // Get platform and device information
+    cl_uint num_platforms;
+    status = clGetPlatformIDs(0, 0, &num_platforms);
+    cl_platform_id *platforms = (cl_platform_id *)memory_push(memory, Memory_Index_temp, sizeof(cl_platform_id) * num_platforms);
+    status = clGetPlatformIDs(num_platforms, platforms, 0);
+
+    // Get the devices list and choose the device to run on
+    cl_uint num_devices;
+    status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 0, 0, &num_devices);
+    cl_device_id *device_list = (cl_device_id *)memory_push(memory, Memory_Index_temp, sizeof(cl_device_id) * num_devices);
+    status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, num_devices, device_list, 0);
+
+    // Create openCL context for each device
+    cl_context context = clCreateContext(0, num_devices, device_list, 0, 0, &status);
+
+    // Create command queue
+    cl_command_queue command_queue = clCreateCommandQueue(context, device_list[0], 0, &status);
+
+    // Create memory buffers on the device
+    cl_mem a_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,  vector_size * sizeof(float), 0, &status);
+    cl_mem b_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,  vector_size * sizeof(float), 0, &status);
+    cl_mem c_clmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, vector_size * sizeof(float), 0, &status);
+
+    // Copy buffer a and b to device
+    status = clEnqueueWriteBuffer(command_queue, a_clmem, CL_TRUE, 0, vector_size * sizeof(float), a, 0, 0, 0);
+    status = clEnqueueWriteBuffer(command_queue, b_clmem, CL_TRUE, 0, vector_size * sizeof(float), b, 0, 0, 0);
+
+    // Create program from kernel source
+    cl_program program = clCreateProgramWithSource(context, 1, &saxpy_kernel, 0, &status);
+
+    // Build the program
+    status = clBuildProgram(program, 1, device_list, 0, 0, 0);
+
+    // Create the OpenCL kernel
+    cl_kernel kernel = clCreateKernel(program, "saxpy_kernel", &status);
+
+    // Set the arguments of the kernel
+    status = clSetKernelArg(kernel, 0, sizeof(float), (void *)&alpha);
+    status = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&a_clmem);
+    status = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&b_clmem);
+    status = clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *)&c_clmem);
+
+    // Execute the OpenCL kernel
+    U64 global_size = vector_size;
+    U64 local_size = 64;
+    status = clEnqueueNDRangeKernel(command_queue, kernel, 1, 0, &global_size, &local_size, 0, 0, 0);
+
+    // Read the cl memory back into c
+    status = clEnqueueReadBuffer(command_queue, c_clmem, CL_TRUE, 0, vector_size * sizeof(F32), c, 0, 0, 0);
+
+    // Wait for commands to complete
+    status = clFlush(command_queue);
+    status = clFinish(command_queue);
+
+    // TODO: Release everything
+
+    int k = 0;
+}
+#endif
+
 //
 // Main callback from platform.
-internal Void handle_input_and_render(API *api, Scene *scene) {
+extern "C" Void handle_input_and_render(API *api, Scene *scene) {
+
     Memory *memory = api->memory;
+    ASSERT(memory->error == Memory_Arena_Error_success);
+
+#if USE_OPENCL
+    opencl_test(memory);
+#endif
+    // Debug testing
+    {
+#if DEBUG_WINDOW_FLAG
+        Debug_Node root = create_node(Debug_Node_Type_root);
+        debug_output_testing(memory, &root);
+#endif
+    }
 
     //
     // Scene swapping
@@ -448,12 +573,12 @@ internal Void handle_input_and_render(API *api, Scene *scene) {
         //       rerender if that's defined.
         Bool require_rerender = (cam_changed) || (api->image_size_change) || (rays_per_pixel_change) || (INTERNAL);
         if(require_rerender) {
-            render_scene(scene, &camera, &image, api->core_count, max_bounce_count, api->current_rays_per_pixel, api->randomish_seed);
+            render_scene(api, scene, &camera, &image, api->core_count, max_bounce_count, api->current_rays_per_pixel, api->randomish_seed);
         }
 
         // Save current bitmap is J is pressed.
         if(api->key['J'] && !api->previous_key['J']) {
-            write_image_to_disk(memory, &image, "output/test.bmp");
+            write_image_to_disk(api, memory, &image, "output/test.bmp");
         }
     }
 }

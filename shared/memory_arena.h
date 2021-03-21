@@ -9,18 +9,26 @@
     #include "memory_arena.h"
 
     // Some defines to change behaviour of the file. MUST be in the same file as MEMORY_ARENA_IMPLEMENTATION.
-    #define MEMORY_ARENA_ASSERT(expression) - Override the default ASSERT used.
-    #define MEMORY_ARENA_ALLOW_ASSERT       - Whether to turn ASSERTS on/off. Has no effect if MEMORY_ARENA_ASSERT is defined.
-    #define MEMORY_PUBLIC_DEC               - Allows functions to have a declaration. Can use static or inline if required.
-    #define DEFAULT_MEMORY_ALIGNMENT        - Override returned alignment of memory allocations. Defaults to 8.
+    #define MEMORY_ARENA_ASSERT(expression)       - Override the default ASSERT used.
+    #define MEMORY_ARENA_ALLOW_ASSERT             - Whether to turn ASSERTS on/off. Has no effect if MEMORY_ARENA_ASSERT is defined.
+    #define MEMORY_PUBLIC_DEC                     - Allows functions to have a declaration. Can use static or inline if required.
+    #define MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT - Override returned alignment of memory allocations. Defaults to 8.
+    #define MEMORY_ARENA_WRITE_ERRORS             - Write errirs to the the memory struct.
 
     Usage:
+
+    #define MEMORY_ARENA_ALLOW_ASSERT // Optional
+    #define MEMORY_ARENA_WRITE_ERRORS // Optional
+    #define MEMORY_ARENA_IMPLEMENTATION
+    #include "../shared/memory_arena.h"
 
     enum Memory_Index {
         Memory_Index_permanent,
         Memory_Index_temp,
     };
     int main(int argc, char **argv) {
+        // TODO: The interface for creating this is terrible (the usage is OK though). Tidy that at some point.
+
         int start_buffer_size = sizeof(Memory::Memory_Group) * 2;
         int permanent_size = 1024;
         int temp_size = 1024;
@@ -57,6 +65,9 @@
             Memory::memory_pop(&memory, array2);
         }
 
+        // Check for errors (can do this after each call).
+        ASSERT(memory->error = Memory::Memory_Arena_Error_success);
+
         free(all_memory);
 
         return(0);
@@ -75,14 +86,24 @@
     #define MEMORY_PUBLIC_DEC
 #endif
 
-#if !defined(DEFAULT_MEMORY_ALIGNMENT)
-    #define DEFAULT_MEMORY_ALIGNMENT 8
+#if !defined(MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT)
+    #define MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT 8
 #endif
 
-namespace Memory_Arena {
+enum Memory_Arena_Error {
+    Memory_Arena_Error_success,
+    Memory_Arena_Error_invalid_group_buffer_index,
+    Memory_Arena_Error_size_too_big,
+    Memory_Arena_Error_invalid_input,
+    Memory_Arena_Error_internal_error,
+    Memory_Arena_Error_wrong_free_order,
+
+    Memory_Arena_Error_count
+};
 
 struct Memory_Group {
     void *base;
+
     uintptr_t used;
     uintptr_t size;
 };
@@ -92,135 +113,201 @@ struct Memory {
 
     Memory_Group *group;
     uintptr_t group_count;
-};
 
-struct Temp_Memory {
-    uintptr_t size;
-    uintptr_t alignment_offset;
-    uintptr_t buffer_index;
+    Memory_Arena_Error error;
 };
 
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count);
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index);
-MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size, uintptr_t alignment = DEFAULT_MEMORY_ALIGNMENT);
-MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *temp_memory_buffer);
+MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
+MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer);
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index);
 
 #if defined(MEMORY_ARENA_IMPLEMENTATION)
 
 #if !defined(MEMORY_ARENA_ASSERT)
     #if defined(MEMORY_ARENA_ALLOW_ASSERT)
-        #define MEMORY_ARENA_ASSERT(exp) do { static int ignore = 0; if(!ignore) { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } } while(0)
+        #define MEMORY_ARENA_ASSERT(exp) { if(!(exp)) {*(uint64_t volatile *)0 = 0; } }
     #else
         #define MEMORY_ARENA_ASSERT(exp) {}
     #endif
 #endif
 
-static uintptr_t internal_get_alignment_offset(void *memory, uintptr_t current_index, uintptr_t alignment) {
-    MEMORY_ARENA_ASSERT(memory);
+struct Internal_Push_Info {
+    void *base;
+    uintptr_t size;
+    uintptr_t alignment_offset;
+    uintptr_t buffer_index;
+};
 
+static uintptr_t internal_get_alignment_offset(Memory *memory, void *memory_base, uintptr_t current_index, uintptr_t alignment) {
     uintptr_t res = 0;
-    uintptr_t result_pointer = (uintptr_t)memory + current_index;
-    uintptr_t alignment_mask = alignment - 1;
-    if(result_pointer & alignment_mask) {
-        res = alignment - (result_pointer & alignment_mask);
+    if(memory_base) {
+        uintptr_t result_pointer = (uintptr_t)memory_base + current_index;
+        uintptr_t alignment_mask = alignment - 1;
+        if(result_pointer & alignment_mask) {
+            res = alignment - (result_pointer & alignment_mask);
+        }
     }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory->error = Memory_Arena_Error_internal_error;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
 
     return(res);
 }
 
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count) {
-    MEMORY_ARENA_ASSERT((base_memory) && (inputs) && (inputs_count > 0));
+    Memory memory = {};
+    if(base_memory && inputs && inputs_count > 0) {
+        memory.group_count = inputs_count;
+        memory.group = (Memory_Group *)base_memory;
+        memory.base = base_memory;
 
-    Memory res = {};
-    res.group_count = inputs_count;
-    res.group = (Memory_Group *)base_memory;
-    res.base = base_memory;
+        uintptr_t running_base_index = (sizeof(Memory_Group) * inputs_count);
 
-    uintptr_t running_base_index = (sizeof(Memory_Group) * inputs_count);
+        for(uintptr_t i = 0; (i < inputs_count); ++i) {
+            uintptr_t alignment_offset = internal_get_alignment_offset(&memory, base_memory, running_base_index,
+                                                                       MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
 
-    for(uintptr_t i = 0; (i < inputs_count); ++i) {
-        uintptr_t alignment_offset = internal_get_alignment_offset(base_memory, running_base_index, DEFAULT_MEMORY_ALIGNMENT);
+            memory.group[i].base = (uint8_t *)base_memory + (running_base_index + alignment_offset);
+            memory.group[i].used = 0;
+            memory.group[i].size = inputs[i] - alignment_offset;
 
-        res.group[i].base = (uint8_t *)base_memory + (running_base_index + alignment_offset);
-        res.group[i].used = 0;
-        res.group[i].size = inputs[i] - alignment_offset;
-
-        running_base_index += (alignment_offset + inputs[i]);
+            running_base_index += (alignment_offset + inputs[i]);
+        }
     }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory.error = Memory_Arena_Error_invalid_input;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
 
-    return(res);
+    return(memory);
 }
 
 static void memory_arena_zero(void *dest, uintptr_t size) {
-    MEMORY_ARENA_ASSERT((dest) && (size > 0));
+    MEMORY_ARENA_ASSERT(dest && size > 0);
 
     uint8_t *dest8 = (uint8_t *)dest;
-    for (uintptr_t i = 0; (i < size); ++i) {
+    for(uintptr_t i = 0; (i < size); ++i) {
         dest8[i] = 0;
     }
 }
 
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index) {
-    MEMORY_ARENA_ASSERT((memory) && (buffer_index < memory->group_count));
-
-    // TODO: Assert buffer_index is valid
-    return(&memory->group[buffer_index]);
-}
-
-MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size, uintptr_t alignment/*=DEFAULT_MEMORY_ALIGNMENT*/) {
-    MEMORY_ARENA_ASSERT((memory) && (buffer_index < memory->group_count) && (size > 0));
-
-    void *res = 0;
-
-    Memory_Group *group = get_memory_group(memory, buffer_index);
-    MEMORY_ARENA_ASSERT(group);
-    if(group) {
-        uintptr_t alignment_offset = internal_get_alignment_offset(memory->base, group->used, alignment);
-        if(group->used + alignment_offset + size < group->size) {
-            Temp_Memory *tm = (Temp_Memory *)(((uint8_t *)group->base) + group->used + alignment_offset);
-            tm->size = size + sizeof(Temp_Memory);
-            tm->alignment_offset = alignment_offset;
-            tm->buffer_index = buffer_index;
-
-            group->used += tm->size + tm->alignment_offset;
-
-            res = (((uint8_t *)tm) + sizeof(Temp_Memory));
-
-            memory_arena_zero(res, size);
-        } else {
+    Memory_Group *res = 0;
+    if(memory) {
+        if(buffer_index < memory->group_count) {
+            res = &memory->group[buffer_index];
+        }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+        else {
+            memory->error = Memory_Arena_Error_invalid_group_buffer_index;
             MEMORY_ARENA_ASSERT(0);
         }
+#endif
     }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory->error = Memory_Arena_Error_invalid_input;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
 
     return(res);
 }
 
-// TODO: If I store the buffer index in Temp_Memory struct we don't need to pass that in.
-MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *temp_memory_buffer) {
-    MEMORY_ARENA_ASSERT((memory) && (temp_memory_buffer));
+MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size,
+                                    uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
+    void *res = 0;
 
-    // TODO: Do an MEMORY_ARENA_assert in here to make sure we're "freeing" memory in the correct order.
+    if(memory && size > 0) {
+        Memory_Group *group = get_memory_group(memory, buffer_index);
+        if(group) {
+            uintptr_t alignment_offset = internal_get_alignment_offset(memory, memory->base, group->used, alignment);
+            if(group->used + alignment_offset + size < group->size) {
+                // We store Internal_Push_Info before the memory returned from this method.
+                Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)group->base) + group->used + alignment_offset);
+                push_info->base = (((uint8_t *)push_info) + sizeof(Internal_Push_Info)); // Only store this so we can assert it in memory_pop
+                push_info->size = size + sizeof(Internal_Push_Info);
+                push_info->alignment_offset = alignment_offset;
+                push_info->buffer_index = buffer_index;
 
-    Temp_Memory *tm = (Temp_Memory *)(((uint8_t *)temp_memory_buffer) - (sizeof(Temp_Memory)));
+                group->used += push_info->size + push_info->alignment_offset;
 
-    Memory_Group *group = get_memory_group(memory, tm->buffer_index);
-    MEMORY_ARENA_ASSERT(group);
-    if(group) {
-        group->used -= (tm->size + tm->alignment_offset);
+                res = push_info->base;
+
+                memory_arena_zero(res, size); // Memory returned from memory_push should always be 0
+            }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+            else {
+                memory->error = Memory_Arena_Error_size_too_big;
+                MEMORY_ARENA_ASSERT(0);
+            }
+#endif
+        }
     }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory->error = Memory_Arena_Error_invalid_input;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
+
+    return(res);
+}
+
+// TODO: If I store the buffer index in Internal_Push_Info struct we don't need to pass that in.
+MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer) {
+    if(memory) {
+        if(memory_buffer) {
+            // TODO: Do an MEMORY_ARENA_ASSERT in here to make sure we're "freeing" memory in the correct order.
+
+            Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)memory_buffer) - (sizeof(Internal_Push_Info)));
+            Memory_Group *group = get_memory_group(memory, push_info->buffer_index);
+            if(group) {
+                uint64_t to_subtract = (push_info->size + push_info->alignment_offset);
+                Internal_Push_Info *expected_push_info = (Internal_Push_Info *)((uint8_t *)group->base + (group->used - to_subtract) + push_info->alignment_offset);
+                if(expected_push_info == push_info) {
+                    group->used -= to_subtract;
+                }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+                else {
+                    memory->error = Memory_Arena_Error_wrong_free_order;
+                    MEMORY_ARENA_ASSERT(0);
+                }
+#endif
+            }
+        }
+    }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory->error = Memory_Arena_Error_invalid_input;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
 }
 
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index) {
-    MEMORY_ARENA_ASSERT((memory) && (buffer_index < memory->group_count));
-
-    Memory_Group *group = &memory->group[buffer_index];
-    group->used = 0;
+    if(memory) {
+        Memory_Group *group = get_memory_group(memory, buffer_index);
+        if(group) {
+            group->used = 0;
+        }
+    }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        memory->error = Memory_Arena_Error_invalid_input;
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
 }
 
 #endif // defined(MEMORY_ARENA_IMPLEMENTATION)
-
-} // namespace Memory_Arena
 
 #endif // !defined(_MEMORY_ARENA_H_INCLUDE)
 

@@ -35,7 +35,7 @@ struct Bitmap_Header {
 };
 #pragma pack(pop)
 
-internal Void write_image_to_disk(Memory *memory, Image *image, String file_name) {
+internal Void write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     U64 output_pixel_size = image->width * image->height * sizeof(U32); // TODO: Should this not be sizeof U32...?
 
     Bitmap_Header header = {};
@@ -52,19 +52,19 @@ internal Void write_image_to_disk(Memory *memory, Image *image, String file_name
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
     U8 *to_write = (U8 *)memory_push(memory, Memory_Index_temp, to_write_size);
-    defer { memory_pop(memory, to_write); };
     memcpy(to_write, &header, sizeof(header));
     memcpy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
-    Bool success = system_write_file(file_name, to_write, to_write_size);
+    Bool success = api->cb.write_file(file_name, to_write, to_write_size);
     ASSERT(success);
+
+    memory_pop(memory, to_write);
 }
 
-internal Image load_image(Memory *memory, String file_name) {
+internal Image load_image(API *api, Memory *memory, String file_name) {
     Image img = {};
 
-    File raw_bitmap = system_read_file(memory, Memory_Index_temp, file_name);
-    defer { memory_pop(memory, raw_bitmap.e); };
+    File raw_bitmap = api->cb.read_file(memory, Memory_Index_temp, file_name, false);
 
     ASSERT(raw_bitmap.size > 0);
     if(raw_bitmap.size > 0) {
@@ -99,6 +99,7 @@ internal Image load_image(Memory *memory, String file_name) {
         }
 
         //write_image_to_disk(memory, &img, "readme/test.bmp"); // Write the loaded in bitmap back to disk. Was used for testing 24-bits per pixel.
+        memory_pop(memory, raw_bitmap.e);
     }
 
     return(img);

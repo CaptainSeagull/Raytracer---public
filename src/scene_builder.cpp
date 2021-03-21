@@ -1,34 +1,34 @@
-enum Node_Type {
-    Node_Type_unknown,
-    Node_Type_root,
-    Node_Type_number_tag,
-    Node_Type_string_tag,
-    Node_Type_object,
-    Node_Type_identifier,
-    Node_Type_array,
-    Node_Type_number,
-    Node_Type_string,
+enum Scene_Node_Type {
+    Scene_Node_Type_unknown,
+    Scene_Node_Type_root,
+    Scene_Node_Type_number_tag,
+    Scene_Node_Type_string_tag,
+    Scene_Node_Type_object,
+    Scene_Node_Type_identifier,
+    Scene_Node_Type_array,
+    Scene_Node_Type_number,
+    Scene_Node_Type_string,
 
-    Node_Type_count
+    Scene_Node_Type_count
 };
 
-struct Node {
+struct Scene_Node {
     Token token;
-    Node_Type type;
+    Scene_Node_Type type;
 
-    Node *child;
-    Node *next;
+    Scene_Node *child;
+    Scene_Node *next;
 };
 
-#define NODE_FOREACH(_node_name, root) for(Node *_node_name = (root); (_node_name); _node_name = _node_name->next)
+#define NODE_FOREACH(_node_name, root) for(Scene_Node *_node_name = (root); (_node_name); _node_name = _node_name->next)
 
 internal Token blank_token() {
     Token r = {};
     return(r);
 }
 
-internal Node *new_node(Memory *memory, Node_Type type, Token token = blank_token()) {
-    Node *node = (Node *)memory_push(memory, Memory_Index_json_parse, sizeof(Node));
+internal Scene_Node *scene_new_node(Memory *memory, Scene_Node_Type type, Token token = blank_token()) {
+    Scene_Node *node = (Scene_Node *)memory_push(memory, Memory_Index_json_parse, sizeof(Scene_Node));
     ASSERT(node);
 
     if(node) {
@@ -39,7 +39,7 @@ internal Node *new_node(Memory *memory, Node_Type type, Token token = blank_toke
     return(node);
 }
 
-internal Node *find_end_node(Node *node) {
+internal Scene_Node *scene_find_end_node(Scene_Node *node) {
     if(node) {
         while(node->next) {
             node = node->next;
@@ -49,33 +49,33 @@ internal Node *find_end_node(Node *node) {
     return(node);
 }
 
-internal Void internal_add_new_node(Node **parent, Node *child) {
+internal Void scene_internal_add_new_node(Scene_Node **parent, Scene_Node *child) {
     if((*parent)->child) {
-        Node *end_node = find_end_node((*parent)->child);
+        Scene_Node *end_node = scene_find_end_node((*parent)->child);
         end_node->next = child;
     } else {
         (*parent)->child = child;
     }
 }
 
-internal Node *add_child_to_node(Memory *memory, Node **parent, Node_Type type, Token token = blank_token()) {
-    Node *node = new_node(memory, type, token);
-    internal_add_new_node(parent, node);
+internal Scene_Node *scene_add_child_to_node(Memory *memory, Scene_Node **parent, Scene_Node_Type type, Token token = blank_token()) {
+    Scene_Node *node = scene_new_node(memory, type, token);
+    scene_internal_add_new_node(parent, node);
 
     return(node);
 }
 
-internal String node_type_to_string(Node_Type node_type) {
+internal String node_type_to_string(Scene_Node_Type node_type) {
     String r = {};
     switch(node_type) {
-        case Node_Type_root: { r = "root"; } break;
-        case Node_Type_object: { r = "object"; } break;
-        case Node_Type_identifier: { r = "identifier"; } break;
-        case Node_Type_array: { r = "array"; } break;
-        case Node_Type_number: { r = "number"; } break;
-        case Node_Type_string: { r = "string"; } break;
-        case Node_Type_number_tag: { r = "number_tag"; } break;
-        case Node_Type_string_tag: { r = "string_tag"; } break;
+        case Scene_Node_Type_root: { r = "root"; } break;
+        case Scene_Node_Type_object: { r = "object"; } break;
+        case Scene_Node_Type_identifier: { r = "identifier"; } break;
+        case Scene_Node_Type_array: { r = "array"; } break;
+        case Scene_Node_Type_number: { r = "number"; } break;
+        case Scene_Node_Type_string: { r = "string"; } break;
+        case Scene_Node_Type_number_tag: { r = "number_tag"; } break;
+        case Scene_Node_Type_string_tag: { r = "string_tag"; } break;
     }
 
     return(r);
@@ -90,17 +90,7 @@ internal Token create_token(String string, Token_Type type = Token_Type_unknown)
     return(res);
 }
 
-#define set(dst, v, n) set_(((Void *)(dst)), (v), (n))
-internal Void *set_(Void *dst, Byte v, Uintptr n) {
-    Byte *dest8 = (Byte *)dst;
-    for(Uintptr i = 0; (i < n); ++i, ++dest8) {
-        *dest8 = (Byte)v;
-    }
-
-    return(dst);
-}
-
-internal U64 internal_print_tree(Memory *memory, Node *node, Char *buf_root, Char *buf, U64 buf_size, Bool print_type) {
+internal U64 internal_print_tree(Memory *memory, Scene_Node *node, Char *buf_root, Char *buf, U64 buf_size, Bool print_type) {
     U64 used = 0;
     if(node) {
         Token type_token = create_token(node_type_to_string(node->type));
@@ -127,7 +117,7 @@ internal U64 internal_print_tree(Memory *memory, Node *node, Char *buf_root, Cha
 
             U64 indent_to_use = (buf - tmp) - 1;
             Char *space_buffer = (Char *)memory_push(memory, Memory_Index_temp, indent_to_use); // TODO: Use memory arena
-            set(space_buffer, ' ', indent_to_use);
+            memset(space_buffer, ' ', indent_to_use);
 
 
             if(indent_to_use > 0) {
@@ -144,7 +134,7 @@ internal U64 internal_print_tree(Memory *memory, Node *node, Char *buf_root, Cha
     return(used);
 }
 
-internal Int get_tree_height(Node *node, Int height = 0) {
+internal Int get_tree_height(Scene_Node *node, Int height = 0) {
     Int left_height = height;
     Int right_height = height;
 
@@ -162,7 +152,7 @@ internal Int get_tree_height(Node *node, Int height = 0) {
     return MAX(left_height, right_height);
 }
 
-internal String print_node_to_string(Memory *memory, Node *node) {
+internal String print_node_to_string(Memory *memory, Scene_Node *node) {
     U64 buf_size = (256 * 256);
     Char *buf = (Char *)memory_push(memory, Memory_Index_json_parse, buf_size);
 
@@ -176,75 +166,75 @@ internal String print_node_to_string(Memory *memory, Node *node) {
     return(res);
 }
 
-internal Void print_node(Memory *memory, String path, Node *node) {
+internal Void print_node(API *api, Memory *memory, String path, Scene_Node *node) {
     String string_to_output = print_node_to_string(memory, node);
 
-    system_write_file(path, (U8 *)string_to_output.e, string_to_output.len);
+    api->cb.write_file(path, (U8 *)string_to_output.e, string_to_output.len);
 }
 
-internal Void internal_parse(Memory *memory, Tokenizer *tokenizer, Node *parent) {
+internal Void internal_parse(Memory *memory, Tokenizer *tokenizer, Scene_Node *parent) {
     Token token = get_token(tokenizer);
     Bool should_loop = true;
     do {
         switch(token.type) {
             case Token_Type_open_brace: {
-                Node *node = add_child_to_node(memory, &parent, Node_Type_object);
+                Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_object);
                 internal_parse(memory, tokenizer, node);
             } break;
 
             case Token_Type_close_brace: {
-                ASSERT(parent->type == Node_Type_object);
+                ASSERT(parent->type == Scene_Node_Type_object);
                 should_loop = false;
             } break;
 
             case Token_Type_open_bracket: {
-                Node *node = add_child_to_node(memory, &parent, Node_Type_array);
+                Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_array);
                 internal_parse(memory, tokenizer, node);
             } break;
 
             case Token_Type_close_bracket: {
-                ASSERT(parent->type == Node_Type_array);
+                ASSERT(parent->type == Scene_Node_Type_array);
                 should_loop = false;
             } break;
 
             case Token_Type_identifier: {
-                //Node *node = add_child_to_node(memory, &parent, Node_Type_object, token);
+                //Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_object, token);
                 if(peak_token(tokenizer).type == Token_Type_colon) { eat_token(tokenizer); }
 
                 Token next_token = peak_token(tokenizer);
                 switch(next_token.type) {
                     case Token_Type_open_brace: {
                         eat_token(tokenizer);
-                        Node *node = add_child_to_node(memory, &parent, Node_Type_object, token);
+                        Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_object, token);
                         internal_parse(memory, tokenizer, node);
                     } break;
 
                     case Token_Type_open_bracket: {
                         eat_token(tokenizer);
-                        Node *node = add_child_to_node(memory, &parent, Node_Type_array, token);
+                        Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_array, token);
                         internal_parse(memory, tokenizer, node);
                     } break;
 
                     case Token_Type_number: {
-                        Node *node = add_child_to_node(memory, &parent, Node_Type_number_tag, token);
-                        add_child_to_node(memory, &node, Node_Type_number, next_token);
+                        Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_number_tag, token);
+                        scene_add_child_to_node(memory, &node, Scene_Node_Type_number, next_token);
                         eat_token(tokenizer);
                     } break;
 
                     case Token_Type_string: {
-                        Node *node = add_child_to_node(memory, &parent, Node_Type_string_tag, token);
-                        add_child_to_node(memory, &node, Node_Type_string, next_token);
+                        Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_string_tag, token);
+                        scene_add_child_to_node(memory, &node, Scene_Node_Type_string, next_token);
                         eat_token(tokenizer);
                     } break;
 
                     case Token_Type_minus: {
-                        Node *node = add_child_to_node(memory, &parent, Node_Type_number_tag, token);
+                        Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_number_tag, token);
                         eat_token(tokenizer);
                         Token next_next_token = get_token(tokenizer); // TODO: Fucking name...
                         ASSERT(next_next_token.type == Token_Type_number);
                         --next_next_token.e;
                         ++next_next_token.len;
-                        add_child_to_node(memory, &node, Node_Type_number);
+                        scene_add_child_to_node(memory, &node, Scene_Node_Type_number);
 
                         eat_token(tokenizer);
                     } break;
@@ -259,15 +249,15 @@ internal Void internal_parse(Memory *memory, Tokenizer *tokenizer, Node *parent)
                 ASSERT(next_token.type == Token_Type_number);
                 --next_token.e;
                 ++next_token.len;
-                Node *node = add_child_to_node(memory, &parent, Node_Type_number, next_token);
+                Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_number, next_token);
             } break;
 
             case Token_Type_number: {
-                Node *node = add_child_to_node(memory, &parent, Node_Type_number, token);
+                Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_number, token);
             } break;
 
             case Token_Type_string: {
-                Node *node = add_child_to_node(memory, &parent, Node_Type_string, token);
+                Scene_Node *node = scene_add_child_to_node(memory, &parent, Scene_Node_Type_string, token);
             } break;
         }
 
@@ -292,7 +282,7 @@ internal Bool operator==(String s, Token t) {
     return(r);
 }
 
-internal V3 node_to_v3(Node *node) {
+internal V3 node_to_v3(Scene_Node *node) {
     V3 r = {};
     Int i = 0;
     NODE_FOREACH(child, node->child) {
@@ -303,7 +293,7 @@ internal V3 node_to_v3(Node *node) {
     return(r);
 }
 
-internal V4 node_to_v4(Node *node) {
+internal V4 node_to_v4(Scene_Node *node) {
     V4 r = {};
     Int i = 0;
     NODE_FOREACH(child, node->child) {
@@ -314,21 +304,21 @@ internal V4 node_to_v4(Node *node) {
     return(r);
 }
 
-internal F32 node_to_float(Node *node) {
+internal F32 node_to_float(Scene_Node *node) {
     String_To_Float_Result r = string_to_float(token_to_string(node->child->token));
     ASSERT(r.success);
     return(r.v);
 }
 
-internal Int node_to_int(Node *node) {
+internal Int node_to_int(Scene_Node *node) {
     String_To_Int_Result r = string_to_int(token_to_string(node->child->token));
     ASSERT(r.success);
     return(r.v);
 }
 
-internal Void iterate_and_create_scene(Memory *memory, Scene *scene, Node *node) {
+internal Void iterate_and_create_scene(Memory *memory, Scene *scene, Scene_Node *node) {
     NODE_FOREACH(cur, node) {
-        if(cur->type == Node_Type_object) {
+        if(cur->type == Scene_Node_Type_object) {
 #if 0
             // TODO: We store the camera information in API now. So this part doesn't work.
             if(cur->token == "camera") {
@@ -353,7 +343,7 @@ internal Void iterate_and_create_scene(Memory *memory, Scene *scene, Node *node)
 #endif
         }
 
-        else if(cur->type == Node_Type_array) {
+        else if(cur->type == Scene_Node_Type_array) {
             if(cur->token == "materials") {
                 NODE_FOREACH(material_object, cur->child) {
                     Material *material = &scene->materials[scene->material_count++];
@@ -441,18 +431,18 @@ internal Void iterate_and_create_scene(Memory *memory, Scene *scene, Node *node)
     }
 }
 
-internal Void create_scene_from_json(Memory *memory, String json, Scene *scene) {
+internal Void create_scene_from_json(API *api, Memory *memory, String json, Scene *scene) {
     // TODO: json HAS to be null terminated for this to work. A version of create_tokenizer which takes a string + length would be useful.
     Tokenizer tokenizer = create_tokenizer(json.e);
 
-    Node root = {};
-    root.type = Node_Type_root;
+    Scene_Node root = {};
+    root.type = Scene_Node_Type_root;
 
     internal_parse(memory, &tokenizer, &root);
 
 #if INTERNAL
     // Debug code to print the tree to disk.
-    print_node(memory, "output/tree.txt", &root);
+    print_node(api, memory, "output/tree.txt", &root);
 #endif
 
     iterate_and_create_scene(memory, scene, &root);

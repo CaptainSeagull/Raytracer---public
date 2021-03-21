@@ -68,8 +68,6 @@
     #define TOKEN_PUBLIC_DEC
 #endif
 
-namespace Tokenizer_Cpp {
-
 enum Token_Type {
     Token_Type_unknown,
 
@@ -505,8 +503,6 @@ TOKEN_PUBLIC_DEC char const *token_type_to_string(Token_Type type) {
 }
 
 #endif // defined(TOKEN_IMPLEMENTATION)
-
-} // namespace Tokenizer_Cpp
 
 #endif // !defined(_TOKEN_H)
 

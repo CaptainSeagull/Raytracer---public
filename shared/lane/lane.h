@@ -3,6 +3,7 @@
 // #define LANE_ALLOW_ASSERTS => Allow allow/disable asserts.
 // #define LANE_INTERNAL      => Allow some internal reporting (like asserts).
 // #define LANE_ASSERT(x)     => Override default assert.
+// #define LANE_USE_CRT_MATH  => Only applicable if LANE_WIDTH=1. If so, use math.h's sqrt instead of _mm_sqrt_ps.
 
 #if !defined(LANE_H)
 #define LANE_H

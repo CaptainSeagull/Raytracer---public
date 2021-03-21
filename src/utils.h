@@ -101,12 +101,17 @@ typedef F32 Float;
 #define internal static
 #define internal_global static
 
+#define FOUR_K (4096 * 2160 * 4)
+
 enum Memory_Index {
     Memory_Index_permanent,
     Memory_Index_temp,
     Memory_Index_world_objects,
     Memory_Index_json_parse,
     Memory_Index_bitmap,
+    Memory_Index_debug_bitmap,
+    Memory_Index_debug_output,
+
     Memory_Index_count
 };
 
@@ -115,6 +120,15 @@ internal U32 safe_truncate_size_64(U64 v) {
     U32 res = (U32)v;
 
     return(res);
+}
+
+internal F32 safe_div(F32 a, F32 b) {
+    F32 r = a;
+    if(b != 0) {
+        r = a / b;
+    }
+
+    return(r);
 }
 
 internal Void *memset(Void *dst, U8 x, Uintptr size) {
@@ -169,4 +183,13 @@ internal V4 linear_to_srgb(V3 u) {
 internal U32 round_f32_to_u32(F32 f) {
     U32 res = (U32)(f + 0.5f);
     return(res);
+}
+
+/* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+internal U64 xorshift64(U64 *a) {
+    *a ^= *a << 13;
+    *a ^= *a >> 7;
+    *a ^= *a << 17;
+
+    return(*a);
 }

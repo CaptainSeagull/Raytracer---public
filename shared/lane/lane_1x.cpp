@@ -1,9 +1,3 @@
-#if defined(LANE_USE_CRT_MATH)
-    #include <math.h> // sqrt
-#else
-    #include <intrin.h>
-#endif
-
 float square_root(float a) {
     float r;
 #if defined(LANE_USE_CRT_MATH)

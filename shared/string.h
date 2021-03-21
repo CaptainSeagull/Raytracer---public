@@ -49,8 +49,6 @@
 #if !defined(_STRING_H_INCLUDE)
 #define _STRING_H_INCLUDE
 
-namespace Cpp_String {
-
 #if !defined(STRING_ASSERT)
     #if defined(MEMORY_ARENA_ALLOW_ASSERT)
         #define STRING_ASSERT(exp) do { static int ignore = 0; if(!ignore) { if(!(exp)) {*(int volatile *)0 = 0; } } } while(0)
@@ -112,6 +110,7 @@ STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char const *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char const *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
+
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
 
 
@@ -351,8 +350,6 @@ STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target) {
 
 
 #endif // STRING_IMPLEMENTATION
-
-} // namespace Cpp_String
 
 #endif // _STRING_H_INCLUDE
 

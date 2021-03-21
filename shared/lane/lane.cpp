@@ -3,6 +3,19 @@
 
 #include "lane.h"
 
+// Use SSE2 sqrt instead of math.h unless LANE_USE_CRT_MATH is defined
+#if LANE_WIDTH==1
+    #if defined(LANE_USE_CRT_MATH)
+        #include <math.h> // sqrt
+    #else
+        #if LANE_COMPILER_MSVC
+            #include <intrin.h>
+        #elif (LANE_COMPILER_CLANG || LANE_COMPILER_GCC)
+            #include <x86intrin.h>
+        #endif
+    #endif
+#endif
+
 namespace lane {
 
 #if !defined(LANE_ALLOW_ASSERTS)
@@ -10,7 +23,6 @@ namespace lane {
 #else
     #define LANE_ASSERT(exp) {}
 #endif
-
 
 #include "lane_common.cpp"
 

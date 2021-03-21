@@ -1,0 +1,9 @@
+Tree output
+
+ -- <root> --  A <header>
+           --  B <header> --  B1 <internal> --  B21 <internal>
+                                            --  B22 <internal>
+                                            --  B23 <internal>
+                                            --  B24 <internal>
+                          --  B2 <internal>
+           --  C <header>

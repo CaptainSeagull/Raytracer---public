@@ -78,6 +78,17 @@ enum Key : Int {
     key_cnt = 128
 };
 
+struct Platform_Callbacks {
+    File (*read_file)(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate);
+    Bool (*write_file)(String fname, U8 *data, U64 size);
+
+    U64 (*locked_add)(U64 volatile *a, U64 b);
+
+    Bool (*add_work_queue_entry)(struct API *api, Void *e, Void (*cb)(Void *d));
+    Void (*complete_all_work)(struct API *api);
+};
+
+// TODO: Tidy API struct
 struct API {
     F32 previous_key[256];
     F32 key[256];
@@ -99,8 +110,6 @@ struct API {
     Int bitmap_height;
     Void *bitmap_memory;
 
-    // TODO: Instead of adding stuff here, just add a void * to separate out the platform/raytracer code more.
-
     Bool image_size_change;
 
     U64 randomish_seed;
@@ -112,14 +121,14 @@ struct API {
     Int current_scene_i;
     Int current_rays_per_pixel;
     Int default_rays_per_pixel;
+
+#if INTERNAL
+    Debug_Node *debug_node;
+#endif
+
+    Int max_work_queue_count;
+
+    Platform_Callbacks cb;
+    Void *platform_specific;
 };
 
-// Platform services
-internal File system_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate = false);
-internal Bool system_write_file(String fname, U8 *data, U64 size);
-internal U64 system_locked_add(U64 volatile *a, U64 b);
-internal Void system_create_thread(Void *p);
-
-// Callbacks
-internal Void worker_thread_callback(Void *p);
-internal Void handle_input_and_render(API *api, struct Scene *scene);
