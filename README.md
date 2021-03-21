@@ -23,6 +23,7 @@ J - save the current scene to disk
 Keys 0 - 4 - Change the scene being rendered.
 
 Left-click  - Pan
+
 Right-Click - Rotate camera (NOT orbit)
 
 ## Building
