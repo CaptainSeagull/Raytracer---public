@@ -24,6 +24,7 @@ J - save the current scene to disk
 Keys 0 - 4 - Change the scene being rendered.
 
 Left-click  - Pan
+
 Right-Click - Rotate camera (NOT orbit)
 
 ## Building
@@ -39,7 +40,7 @@ INTERNAL_FLAG - Some internal reporting like a text overley.
 
 ALLOW_ASSERTS - Enable/disable asserts
 
-LANE_WIDTH=8 - Lane width to compile for. Supports 1, 4, and 8.
+LANE_WIDTH - Lane width to compile for. Supports 1, 4, and 8.
 
 
 ## Directory structure
