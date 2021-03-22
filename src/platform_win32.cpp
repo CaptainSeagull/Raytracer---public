@@ -659,11 +659,24 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
                     float ms_per_frame = 16.6666f;
 
+                    Char _path[1024] = {}; // TODO: MAX_PATH?
+                    GetModuleFileNameA(0, _path, ARRAY_COUNT(_path));
+                    String path = create_string(_path);
+                    Int last_slash = find_index(path, '\\', true);
+                    ASSERT(last_slash != -1);
+                    ++last_slash;
+
                     // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
                     // to the current EXE and load the DLLs from there?
-                    Char *source_dll_full = "../build/Raytracer.dll";
-                    Char *temp_dll_full = "../build/Raytracer_temp.dll";
-                    Win32_Loaded_Code code = win32_load_code(source_dll_full, temp_dll_full);
+                    Char src_dll_path[1024] = {};
+                    Char tmp_dll_path[1024] = {};
+
+                    string_copy(src_dll_path, _path);
+                    string_copy(&src_dll_path[last_slash], "raytracer.dll");
+                    string_copy(tmp_dll_path, _path);
+                    string_copy(&tmp_dll_path[last_slash], "raytracer_temp.dll");
+
+                    Win32_Loaded_Code code = win32_load_code(src_dll_path, tmp_dll_path);
 
                     Win32_API win32_api = {};
                     win32_api.queue.entry_count = 2048;
@@ -708,7 +721,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                         // TODO: Do raytracer in separate thread and only have main thread process window messages?
 
                         // Unload the raytracer DLL then reload it in.
-                        FILETIME new_write_time = win32_get_last_write_time(source_dll_full);
+                        FILETIME new_write_time = win32_get_last_write_time(src_dll_path);
                         if(CompareFileTime(&new_write_time, &code.dll_last_write_time) != 0) {
                             if(code.dll) {
                                 FreeLibrary(code.dll);
@@ -717,7 +730,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                                 code.handle_input_and_render = 0;
                             }
 
-                            code = win32_load_code(source_dll_full, temp_dll_full);
+                            code = win32_load_code(src_dll_path, tmp_dll_path);
                         }
 
 

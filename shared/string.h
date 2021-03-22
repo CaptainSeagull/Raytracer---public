@@ -1,4 +1,4 @@
-/*  string.h - v0.1 - public domain helper library - no warranty implied; use at your own risk
+/*  string.h - v0.2 - public domain helper library - no warranty implied; use at your own risk
 
     Utility for working with strings in C++.
     Note that this class does NO ALLOCATIONS. It expects calling code to deal with mallocing/freeing of the memory.
@@ -94,10 +94,16 @@ struct String_To_Float_Result {
 
 STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len = 0);
 STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len = 0);
+
 STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = 1);
+
 STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
+
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b);
+STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
+
+STRING_PUBLIC_DEC STRING_SIZE_TYPE find_index(String str, char target, int/*bool*/ find_last = false); // Returns -1 on failure
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char *str);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char const *str);
@@ -109,10 +115,6 @@ STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char const *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char const *src);
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
-
-STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
-
 
 #if defined(STRING_IMPLEMENTATION)
 
@@ -184,6 +186,36 @@ STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b) {
             if(string_compare(a_tmp, b)) {
                 res = true;
                 break; // for
+            }
+        }
+    }
+
+    return(res);
+}
+
+STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target) {
+    int/*bool*/ res = false;
+
+    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
+        if(str.e[i] == target) {
+            res = true;
+            break;
+        }
+    }
+
+    return(res);
+}
+
+STRING_PUBLIC_DEC STRING_SIZE_TYPE find_index(String str, char target, int/*bool*/ find_last/*=false*/) {
+    STRING_SIZE_TYPE res = -1;
+
+    // TODO: Would be faster to do a reversed search if find_last is defined... but lazy
+
+    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
+        if(str.e[i] == target) {
+            res = i;
+            if(!find_last) {
+                break;
             }
         }
     }
@@ -334,20 +366,6 @@ STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char *src) {
     STRING_SIZE_TYPE r = string_copy((char *)dst, src);
     return(r);
 }
-
-STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target) {
-    int/*bool*/ res = false;
-
-    for(int i = 0; (i < str.len); ++i) {
-        if(str.e[i] == target) {
-            res = true;
-            break;
-        }
-    }
-
-    return(res);
-}
-
 
 #endif // STRING_IMPLEMENTATION
 
